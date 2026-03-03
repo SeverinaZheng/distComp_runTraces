@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # Find all .oracleGeneral.zst files under /mntData2/data/oracleReuse/ and generate cachesim commands
-find /mntData2/data/oracleReuse/ -name "*.oracleGeneral.zst" -type f | while read -r file; do
+find /s3/cache_datasets/cache_dataset_lcs/alibaba -name "*.lcs.zst" -type f | while read -r file; do
+    size=$(stat -c%s "$file")
+    if [ "$size" -gt $((5 * 1024 * 1024 * 1024)) ]; then
+        continue
+    fi
     absolute_path=$(realpath "$file")
-    echo "shell:4:2:2:/users/YJZheng/libCacheSim/_build/bin/cachesim $absolute_path oracleGeneral fifo,lru,clock,lfu,random,car,arc,lirs 0.001,0.01,0.1 --ignore-obj-size 0 2> log.err"
-    echo "shell:4:2:2:/users/YJZheng/libCacheSim/_build/bin/cachesim $absolute_path oracleGeneral belady,sieve,lecar 0.001,0.01,0.1 --ignore-obj-size 0 2> log.err"
-    echo "shell:4:2:2:/users/YJZheng/libCacheSim/_build/bin/cachesim $absolute_path oracleGeneral lhd,hyperbolic,gdsf,wtinyLFU,twoq,slru,s3fifo 0.001,0.01,0.1 --ignore-obj-size 0 2> log.err"
+    echo "shell:4:2:2:python3 /users/YJZheng/distComp/generate_MRC.py --tracepath  $absolute_path --xmax 1 --algorithms fifo,lru,clock,lfu,random,car,arc,lirs"
+    echo "shell:4:2:2:python3 /users/YJZheng/distComp/generate_MRC.py --tracepath  $absolute_path --xmax 1 --algorithms belady,sieve,lecar,lhd,hyperbolic,gdsf,wtinyLFU,twoq,s3fifo"
 done > ./task

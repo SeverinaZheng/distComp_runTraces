@@ -1,6 +1,9 @@
 import os
 import sys
 
+# Prevent the local redis/ directory from shadowing the installed redis package
+sys.path = [p for p in sys.path if p not in ("", ".")]
+
 import time
 import signal
 import socket
@@ -29,14 +32,20 @@ def run_demo_task(task_params):
     return p.returncode, o_stdout, o_stderr
 
 
+WORKER_VENV = ""
+
 def run_shell_task(task_params):
     """
     export TCMALLOC_LARGE_ALLOC_REPORT_THRESHOLD=1048576000000;
 
     """
 
+    if WORKER_VENV:
+        task_params = "source {}/bin/activate && {}".format(WORKER_VENV, task_params)
+
     p = subprocess.run(task_params,
                        shell=True,
+                       executable="/bin/bash",
                        stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE)
     o_stdout = p.stdout.decode("ascii").strip()
@@ -472,9 +481,15 @@ if __name__ == "__main__":
                         type=str,
                         default="worker",
                         help="worker")
+    parser.add_argument("--venv",
+                        type=str,
+                        default="",
+                        help="path to virtualenv to activate when running shell tasks (e.g. ~/.parallel-ssh-venv)")
     ap = parser.parse_args()
 
     if ap.task == "worker":
+        import redisWorker as _self
+        _self.WORKER_VENV = os.path.expanduser(ap.venv)
         worker = Worker()
         worker.start()
     else:
