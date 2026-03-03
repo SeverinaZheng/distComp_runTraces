@@ -1,9 +1,9 @@
 {
-    "min_dram_gb_accept_new_task": 80,
-    "min_dram_gb_trigger_return": 40,
+    "min_dram_gb_accept_new_task": 4,
+    "min_dram_gb_trigger_return": 2,
     "sleep_sec_between_accepting_task": 2,
     "health_report_interval": 2,
-    "max_task_per_worker": 32,
+    "max_task_per_worker": 1,
     "max_retry_per_task": 4,
     "result_dir": "./",
     "redis_host": "node0",
