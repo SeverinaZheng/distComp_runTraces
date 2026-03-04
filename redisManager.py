@@ -7,6 +7,7 @@ from collections import defaultdict, Counter
 from functools import partial
 import redis
 from const import *
+from utils import WORKER_STOP_COMMAND
 from utils import *
 
 
@@ -238,6 +239,17 @@ def cleanup_task(redis_inst,
         redis_inst.hdel(REDIS_KEY_IN_PROGRESS_TASKS, task)
         redis_inst.hset(REDIS_KEY_TODO_TASKS, task, "")
 
+def stop_workers(redis_inst):
+    """
+    Signal all workers to stop by pushing WORKER_STOP_COMMAND into the todo queue.
+    Workers will pick it up on their next poll and exit cleanly.
+
+    """
+    redis_inst.hset(REDIS_KEY_TODO_TASKS, WORKER_STOP_COMMAND, "")
+    logging.info("stop signal sent to all workers")
+    print("Stop signal sent. Workers will exit after finishing their current tasks.")
+
+
 def remove_finished_tasks():
     """
     remove finished tasks
@@ -301,7 +313,7 @@ if __name__ == "__main__":
                         type=str,
                         required=True,
                         help="task to execute, initRedis/loadTask/checkWorker/checkTask/checkLog/"+
-                                "cleanup/removeFinishedTask/moveInProgressTaskToTodo/moveFailedTaskToTodo"
+                                "cleanup/removeFinishedTask/moveInProgressTaskToTodo/moveFailedTaskToTodo/stopWorker"
                         )
     parser.add_argument("--include",
                         type=str,
@@ -390,5 +402,7 @@ if __name__ == "__main__":
             move_in_progress_task_to_todo()
         elif task == "moveFailedTaskToTodo":
             move_failed_task_to_todo_task()
+        elif task == "stopWorker":
+            stop_workers(redis_inst)
         else:
             raise RuntimeError("unknown task " + task)

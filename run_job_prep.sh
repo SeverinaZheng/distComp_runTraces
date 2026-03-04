@@ -21,11 +21,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 SRC="$SCRIPT_DIR/generate_MRC.py"
+SRC_MANAGER="$SCRIPT_DIR/distComp/redisManager.py"
+SRC_WORKER="$SCRIPT_DIR/distComp/redisWorker.py"
 REMOTE_DIR="/users/YJZheng/distComp"
 VENV="$HOME/.parallel-ssh-venv"
 
 if [ ! -f "$SRC" ]; then
     echo "[ERROR] $SRC not found" >&2
+    exit 1
+fi
+if [ ! -f "$SRC_MANAGER" ]; then
+    echo "[ERROR] $SRC_MANAGER not found" >&2
+    exit 1
+fi
+if [ ! -f "$SRC_WORKER" ]; then
+    echo "[ERROR] $SRC_WORKER not found" >&2
     exit 1
 fi
 
@@ -37,30 +47,55 @@ successful=()
 failed=()
 
 for node in "${NODES[@]}"; do
-    echo -e "${GREEN}[INFO]${NC} [$node] Copying generate_MRC.py..."
-    if ! scp -o StrictHostKeyChecking=accept-new "$SRC" "${node}:${REMOTE_DIR}/generate_MRC.py"; then
-        echo -e "${RED}[ERROR]${NC} [$node] scp failed" >&2
+    # echo -e "${GREEN}[INFO]${NC} [$node] Copying generate_MRC.py..."
+    # if ! scp -o StrictHostKeyChecking=accept-new "$SRC" "${node}:${REMOTE_DIR}/generate_MRC.py"; then
+    #     echo -e "${RED}[ERROR]${NC} [$node] scp failed" >&2
+    #     failed+=("$node")
+    #     continue
+    # fi
+
+    # echo -e "${GREEN}[INFO]${NC} [$node] Copying redisManager.py..."
+    # if ! scp -o StrictHostKeyChecking=accept-new "$SRC_MANAGER" "${node}:${REMOTE_DIR}/redisManager.py"; then
+    #     echo -e "${RED}[ERROR]${NC} [$node] redisManager.py copy failed" >&2
+    #     failed+=("$node")
+    #     continue
+    # fi
+
+    # echo -e "${GREEN}[INFO]${NC} [$node] Copying redisWorker.py..."
+    # if ! scp -o StrictHostKeyChecking=accept-new "$SRC_WORKER" "${node}:${REMOTE_DIR}/redisWorker.py"; then
+    #     echo -e "${RED}[ERROR]${NC} [$node] redisWorker.py copy failed" >&2
+    #     failed+=("$node")
+    #     continue
+    # fi
+
+    # echo -e "${GREEN}[INFO]${NC} [$node] Installing matplotlib in venv..."
+    # if ! ssh -o StrictHostKeyChecking=accept-new "$node" \
+    #     "source ${VENV}/bin/activate && pip install --quiet matplotlib"; then
+    #     echo -e "${RED}[ERROR]${NC} [$node] pip install failed" >&2
+    #     failed+=("$node")
+    #     continue
+    # fi
+
+    # echo -e "${GREEN}[INFO]${NC} [$node] Installing redis psutil in venv..."
+    # if ! ssh -o StrictHostKeyChecking=accept-new "$node" \
+    #     "source ${VENV}/bin/activate && pip install --quiet redis psutil"; then
+    #     echo -e "${RED}[ERROR]${NC} [$node] pip install failed" >&2
+    #     failed+=("$node")
+    #     continue
+    # fi
+
+    echo -e "${GREEN}[INFO]${NC} [$node] Copying conf.json..."
+    if ! scp -o StrictHostKeyChecking=accept-new "${REMOTE_DIR}/conf.json" "${node}:${REMOTE_DIR}/conf.json"; then
+        echo -e "${RED}[ERROR]${NC} [$node] conf.json copy failed" >&2
         failed+=("$node")
         continue
     fi
 
-    echo -e "${GREEN}[INFO]${NC} [$node] Installing matplotlib in venv..."
-    if ! ssh -o StrictHostKeyChecking=accept-new "$node" \
-        "source ${VENV}/bin/activate && pip install --quiet matplotlib"; then
-        echo -e "${RED}[ERROR]${NC} [$node] pip install failed" >&2
-        failed+=("$node")
-        continue
-    fi
+    echo -e "${GREEN}[INFO]${NC} [$node] Removing libCacheSim result dir if exists..."
+    ssh -o StrictHostKeyChecking=accept-new "$node" \
+        "rm -rf /users/YJZheng/libCacheSim/_build/result" || true
 
-    echo -e "${GREEN}[INFO]${NC} [$node] Installing redis psutil in venv..."
-    if ! ssh -o StrictHostKeyChecking=accept-new "$node" \
-        "source ${VENV}/bin/activate && pip install --quiet redis psutil"; then
-        echo -e "${RED}[ERROR]${NC} [$node] pip install failed" >&2
-        failed+=("$node")
-        continue
-    fi
-
-    echo -e "${GREEN}[INFO]${NC} [$node] Done."
+    # echo -e "${GREEN}[INFO]${NC} [$node] Done."
     successful+=("$node")
 done
 
