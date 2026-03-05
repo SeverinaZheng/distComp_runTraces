@@ -54,19 +54,19 @@ for node in "${NODES[@]}"; do
     #     continue
     # fi
 
-    # echo -e "${GREEN}[INFO]${NC} [$node] Copying redisManager.py..."
-    # if ! scp -o StrictHostKeyChecking=accept-new "$SRC_MANAGER" "${node}:${REMOTE_DIR}/redisManager.py"; then
-    #     echo -e "${RED}[ERROR]${NC} [$node] redisManager.py copy failed" >&2
-    #     failed+=("$node")
-    #     continue
-    # fi
+    echo -e "${GREEN}[INFO]${NC} [$node] Copying redisManager.py..."
+    if ! scp -o StrictHostKeyChecking=accept-new "$SRC_MANAGER" "${node}:${REMOTE_DIR}/redisManager.py"; then
+        echo -e "${RED}[ERROR]${NC} [$node] redisManager.py copy failed" >&2
+        failed+=("$node")
+        continue
+    fi
 
-    # echo -e "${GREEN}[INFO]${NC} [$node] Copying redisWorker.py..."
-    # if ! scp -o StrictHostKeyChecking=accept-new "$SRC_WORKER" "${node}:${REMOTE_DIR}/redisWorker.py"; then
-    #     echo -e "${RED}[ERROR]${NC} [$node] redisWorker.py copy failed" >&2
-    #     failed+=("$node")
-    #     continue
-    # fi
+    echo -e "${GREEN}[INFO]${NC} [$node] Copying redisWorker.py..."
+    if ! scp -o StrictHostKeyChecking=accept-new "$SRC_WORKER" "${node}:${REMOTE_DIR}/redisWorker.py"; then
+        echo -e "${RED}[ERROR]${NC} [$node] redisWorker.py copy failed" >&2
+        failed+=("$node")
+        continue
+    fi
 
     # echo -e "${GREEN}[INFO]${NC} [$node] Installing matplotlib in venv..."
     # if ! ssh -o StrictHostKeyChecking=accept-new "$node" \

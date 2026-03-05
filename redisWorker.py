@@ -21,6 +21,15 @@ from const import *
 
 CONFIG = RunnerConfig(CONFIG_PATH, auto_reload=True)
 
+# Dedicated logger for killed jobs
+_kill_log_handler = logging.FileHandler("kill.log")
+_kill_log_handler.setFormatter(logging.Formatter(
+    '%(asctime)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+kill_logger = logging.getLogger("kill_logger")
+kill_logger.setLevel(logging.INFO)
+kill_logger.addHandler(_kill_log_handler)
+kill_logger.propagate = False
+
 
 def run_demo_task(task_params):
     p = subprocess.run("echo demo {}".format(task_params),
@@ -69,6 +78,7 @@ def report_task_finish(worker_name, redis_inst, task, result):
     if worker != worker_name:
         logging.error(
             f"finished task is not assigned to worker {worker} != {worker_name}")
+        return
 
     redis_inst.hset(REDIS_KEY_FINISHED_TASKS, task.task_str,
                             "{}: {}".format(worker_name, result))
@@ -87,6 +97,7 @@ def report_task_failed(worker_name, redis_inst, task, errmsg, max_retry_per_task
     if worker != worker_name:
         logging.error(
             f"finished task is not assigned to worker {worker} != {worker_name}")
+        return
 
     failed_workers = redis_inst.hget(
         REDIS_KEY_FAILED_TASKS, task.task_str)
@@ -313,16 +324,27 @@ class Worker:
 
                 self.in_prog_need_dram_gb -= task.min_dram_gb
 
+                run_time = time.time() - start_time
                 if len(self.in_progress_tasks) == 1:
+                    reason = f"require too much dram (worker {self.name})"
                     logging.warning("one task to return")
+                    kill_logger.info(
+                        f"KILLED worker={self.name} reason=OOM_no_other_task "
+                        f"run_time={run_time:.1f}s "
+                        f"used_mem={self.used_mem_gb:.1f}/{self.total_mem_gb:.1f}GB "
+                        f"task={task}")
                     report_task_failed(self.name, self.redis_inst,
-                        task, f"require too much dram (worker {self.name})", 
+                        task, reason,
                         self.config.max_retry_per_task)
                 else:
+                    kill_logger.info(
+                        f"KILLED worker={self.name} reason=OOM_returned_to_queue "
+                        f"run_time={run_time:.1f}s "
+                        f"used_mem={self.used_mem_gb:.1f}/{self.total_mem_gb:.1f}GB "
+                        f"task={task}")
                     self.return_task(task.task_str)
                 logging.info("return task \"{}\" run time {:.2f}".format(
-                    task,
-                    time.time() - start_time))
+                    task, run_time))
                 del self.in_progress_tasks[task]
 
             else:
@@ -348,8 +370,18 @@ class Worker:
                     continue
 
                 proc.join()
-                finished_tasks[task] = proc.exitcode
+                exitcode = proc.exitcode
+                finished_tasks[task] = exitcode
                 self.in_prog_need_dram_gb -= task.min_dram_gb
+
+                # negative exitcode means killed by a signal (e.g. OS OOM killer)
+                if exitcode is not None and exitcode < 0:
+                    run_time = time.time() - start_time
+                    kill_logger.info(
+                        f"KILLED worker={self.name} reason=signal exitcode={exitcode} "
+                        f"run_time={run_time:.1f}s "
+                        f"used_mem={self.used_mem_gb:.1f}/{self.total_mem_gb:.1f}GB "
+                        f"task={task}")
 
             for task in finished_tasks.keys():
                 del self.in_progress_tasks[task]

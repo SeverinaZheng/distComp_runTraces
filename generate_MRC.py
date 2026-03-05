@@ -30,9 +30,9 @@ def build_cache_sizes() -> List[float]:
 
 	# 0.001 to 0.005 with step 0.0002
 	val = 0.001
-	while val <= 1.0001:  # tolerance for floating point
-		sizes.append(round(val, 6))
-		val += 0.02
+	# while val <= 1.0001:  # tolerance for floating point
+	# 	sizes.append(round(val, 6))
+	# 	val += 0.02
 
 	# val = 0.41
 	# while val <= 0.8000001:  # tolerance for floating point
@@ -287,15 +287,15 @@ def main():
 	else:
 		cache_sizes = build_cache_sizes()
 	result_path = run_cachesim(args.algorithms, args.tracepath, cache_sizes)
-	if result_path:
-		plot_mrc(
-			result_path,
-			cache_sizes,
-			ymin=args.ymin,
-			ymax=args.ymax,
-			xmax=args.xmax,
-			algorithms_filter=args.algorithms.split(",") if args.algorithms else None,
-		)
+	# if result_path:
+	# 	plot_mrc(
+	# 		result_path,
+	# 		cache_sizes,
+	# 		ymin=args.ymin,
+	# 		ymax=args.ymax,
+	# 		xmax=args.xmax,
+	# 		algorithms_filter=args.algorithms.split(",") if args.algorithms else None,
+	# 	)
 
 
 if __name__ == "__main__":
